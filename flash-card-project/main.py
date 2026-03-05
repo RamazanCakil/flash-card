@@ -1,76 +1,71 @@
-BACKGROUND_COLOR = "#B1DDC6"
 from tkinter import *
 import pandas
 import random
 
+BACKGROUND_COLOR = "#B1DDC6"
+current_card = {}
+to_learn = {}
 
-def time_counter(count,current_card):
-    if count>0:
-        window.after(1000,time_counter,count-1,current_card)
-    elif count<=0:
-        #back_ground = PhotoImage(file="images/card_back.png")
-        canvas.itemconfig(fore_card, image=back_card)
-        canvas.itemconfig(tittle,text="English",fill="white")
-        canvas.itemconfig(vocabulary,text=current_card["English"],fill="white")
-        #canvas.itemconfig(highlightthickness=1)
-
-
-def right_button_fonc():
-    #back_ground = PhotoImage(file="images/card_back.png")
+try:
+    data = pandas.read_csv("data/words_to_learn.csv")
+except FileNotFoundError:
+    original_data = pandas.read_csv("data/french_words.csv")
+    print(original_data)
+    to_learn = original_data.to_dict(orient="records")
+else:
+    to_learn = data.to_dict(orient="records")
 
 
-    canvas.itemconfig(back_card, image=fore_card)
-    canvas.itemconfig(tittle,text="French",fill="black")
-    current_card=random.choice(list_of_csv)
-
-    canvas.itemconfig(vocabulary,text=current_card["French"],font=("Ariel",30,"bold"),fill="black")
-    time_counter(3,current_card)
-
-
-
-def wrong_button_fonc():
-    canvas.itemconfig(back_card, image=fore_card)
-    canvas.itemconfig(tittle,text="French",fill="black")
-    current_card = random.choice(list_of_csv)
-
-    canvas.itemconfig(vocabulary,text=current_card["French"],fill="black")
-    time_counter(3,current_card)
+def next_card():
+    global current_card, flip_timer
+    window.after_cancel(flip_timer)
+    current_card = random.choice(to_learn)
+    canvas.itemconfig(card_title, text="French", fill="black")
+    canvas.itemconfig(card_word, text=current_card["French"], fill="black")
+    canvas.itemconfig(card_background, image=card_front_img)
+    flip_timer = window.after(3000, func=flip_card)
 
 
-data=pandas.read_csv("data/french_words.csv")
-df=pandas.DataFrame(data)
-list_of_csv=df.to_dict(orient="records")
-#print(list_of_csv[0])
-
-window=Tk()
-window.title("flash card app")
-window.config(padx=50,pady=50,bg=BACKGROUND_COLOR)
-
-canvas=Canvas(width=800,height=526,bg=BACKGROUND_COLOR,highlightthickness=0)
-
-back_ground = PhotoImage(file="images/card_back.png")
-back_card=canvas.create_image(400,263,image=back_ground)
-fore_ground=PhotoImage(file="images/card_front.png")
-fore_card=canvas.create_image(400,263,image=fore_ground)
+def flip_card():
+    canvas.itemconfig(card_title, text="English", fill="white")
+    canvas.itemconfig(card_word, text=current_card["English"], fill="white")
+    canvas.itemconfig(card_background, image=card_back_img)
 
 
-tittle=canvas.create_text(400,150,text="tittle",font=("Ariel",40,"italic"))
-vocabulary=canvas.create_text(400,263,text="word",font=("Ariel",60,"bold"))
-
-right_image=PhotoImage(file="images/right.png")
-right_button=Button(image=right_image,highlightthickness=0,command=right_button_fonc)
-right_button.grid(column=1,row=1)
-
-wrong_image=PhotoImage(file="images/wrong.png")
-wrong_button=Button(image=wrong_image,highlightthickness=0,command=wrong_button_fonc)
-wrong_button.grid(column=0,row=1)
-
-canvas.grid(column=0,row=0,columnspan=2)
+def is_known():
+    to_learn.remove(current_card)
+    print(len(to_learn))
+    data = pandas.DataFrame(to_learn)
+    data.to_csv("data/words_to_learn.csv", index=False)
+    next_card()
 
 
+window = Tk()
+window.title("Flashy")
+window.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
 
+flip_timer = window.after(3000, func=flip_card)
 
+canvas = Canvas(width=800, height=526)
+card_front_img = PhotoImage(file="images/card_front.png")
+card_back_img = PhotoImage(file="images/card_back.png")
+card_background = canvas.create_image(400, 263, image=card_front_img)
+card_title = canvas.create_text(400, 150, text="", font=("Ariel", 40, "italic"))
+card_word = canvas.create_text(400, 263, text="", font=("Ariel", 60, "bold"))
+canvas.config(bg=BACKGROUND_COLOR, highlightthickness=0)
+canvas.grid(row=0, column=0, columnspan=2)
 
+cross_image = PhotoImage(file="images/wrong.png")
+unknown_button = Button(image=cross_image, highlightthickness=0, command=next_card)
+unknown_button.grid(row=1, column=0)
 
+check_image = PhotoImage(file="images/right.png")
+known_button = Button(image=check_image, highlightthickness=0, command=is_known)
+known_button.grid(row=1, column=1)
+
+next_card()
 
 window.mainloop()
+
+
+
